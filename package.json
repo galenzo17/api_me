@@ -22,7 +22,8 @@
     "seed": "node scripts/seed-data.js",
     "simulate": "node scripts/simulate-workers.js",
     "monitor": "node scripts/monitor.js",
-    "demo": "./scripts/run-simulation.sh"
+    "demo": "./scripts/run-simulation.sh",
+    "record": "./scripts/record-demo.sh"
   },
   "keywords": [],
   "author": "",

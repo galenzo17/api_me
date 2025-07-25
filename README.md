@@ -50,6 +50,12 @@ npm run start:dev
 
 The API will be available at `http://localhost:3000`
 
+## 🎬 Concurrency Demo
+
+![Concurrency Demo](vhs-recordings/simple-demo.gif)
+
+See the pessimistic locking in action with multiple workers competing for jobs and transactions!
+
 ## API Endpoints
 
 ### Jobs
@@ -201,6 +207,12 @@ npm run db:studio      # Open Drizzle Studio (database GUI)
 
 npm test              # Run tests in watch mode
 npm run test:coverage # Test coverage report
+
+npm run seed          # Generate test data
+npm run simulate      # Run worker simulation
+npm run monitor       # Real-time dashboard
+npm run demo          # Interactive demo setup
+npm run record        # Record VHS terminal demos
 ```
 
 ### Database Operations
