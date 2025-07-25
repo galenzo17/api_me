@@ -18,7 +18,11 @@
     "test:watch": "vitest --watch",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "seed": "node scripts/seed-data.js",
+    "simulate": "node scripts/simulate-workers.js",
+    "monitor": "node scripts/monitor.js",
+    "demo": "./scripts/run-simulation.sh"
   },
   "keywords": [],
   "author": "",
@@ -29,7 +33,9 @@
     "@nestjs/core": "^11.1.5",
     "@nestjs/platform-express": "^11.1.5",
     "@types/better-sqlite3": "^7.6.13",
+    "axios": "^1.11.0",
     "better-sqlite3": "^12.2.0",
+    "colors": "^1.4.0",
     "drizzle-orm": "^0.44.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"

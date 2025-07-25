@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { db } from '../database/connection';
 import { jobs, transactions } from '../schemas';
 import { eq, and, isNull, sql, or } from 'drizzle-orm';
 
 @Injectable()
 export class LockService {
+  private readonly logger = new Logger(LockService.name);
   private readonly lockTimeout = 30000; // 30 seconds
 
   async acquireJobLock(jobId: number, workerId: string): Promise<boolean> {
@@ -12,6 +13,8 @@ export class LockService {
     const lockExpiry = new Date(now.getTime() - this.lockTimeout);
 
     try {
+      this.logger.debug(`🔒 [${workerId}] Attempting to acquire lock for job ${jobId}`);
+      
       const result = db
         .update(jobs)
         .set({
@@ -31,15 +34,24 @@ export class LockService {
         )
         .run();
 
-      return result.changes > 0;
+      const acquired = result.changes > 0;
+      if (acquired) {
+        this.logger.log(`🔐 [${workerId}] ✅ ACQUIRED lock for job ${jobId}`);
+      } else {
+        this.logger.debug(`🔒 [${workerId}] ❌ FAILED to acquire lock for job ${jobId} (already locked or not pending)`);
+      }
+      
+      return acquired;
     } catch (error) {
-      console.error('Error acquiring job lock:', error);
+      this.logger.error(`🔒 [${workerId}] ERROR acquiring job lock for ${jobId}: ${error.message}`);
       return false;
     }
   }
 
   async releaseJobLock(jobId: number, workerId: string): Promise<boolean> {
     try {
+      this.logger.debug(`🔓 [${workerId}] Releasing lock for job ${jobId}`);
+      
       const result = db
         .update(jobs)
         .set({
@@ -55,9 +67,16 @@ export class LockService {
         )
         .run();
 
-      return result.changes > 0;
+      const released = result.changes > 0;
+      if (released) {
+        this.logger.log(`🔓 [${workerId}] ✅ RELEASED lock for job ${jobId}`);
+      } else {
+        this.logger.warn(`🔓 [${workerId}] ❌ FAILED to release lock for job ${jobId} (not owned by worker)`);
+      }
+      
+      return released;
     } catch (error) {
-      console.error('Error releasing job lock:', error);
+      this.logger.error(`🔓 [${workerId}] ERROR releasing job lock for ${jobId}: ${error.message}`);
       return false;
     }
   }
@@ -67,6 +86,8 @@ export class LockService {
     const lockExpiry = new Date(now.getTime() - this.lockTimeout);
 
     try {
+      this.logger.debug(`💰 [${workerId}] Attempting to acquire lock for transaction ${transactionId}`);
+      
       const result = db
         .update(transactions)
         .set({
@@ -86,15 +107,24 @@ export class LockService {
         )
         .run();
 
-      return result.changes > 0;
+      const acquired = result.changes > 0;
+      if (acquired) {
+        this.logger.log(`💎 [${workerId}] ✅ ACQUIRED lock for transaction ${transactionId}`);
+      } else {
+        this.logger.debug(`💰 [${workerId}] ❌ FAILED to acquire lock for transaction ${transactionId} (already locked or not pending)`);
+      }
+      
+      return acquired;
     } catch (error) {
-      console.error('Error acquiring transaction lock:', error);
+      this.logger.error(`💰 [${workerId}] ERROR acquiring transaction lock for ${transactionId}: ${error.message}`);
       return false;
     }
   }
 
   async releaseTransactionLock(transactionId: number, workerId: string): Promise<boolean> {
     try {
+      this.logger.debug(`💸 [${workerId}] Releasing lock for transaction ${transactionId}`);
+      
       const result = db
         .update(transactions)
         .set({
@@ -110,9 +140,16 @@ export class LockService {
         )
         .run();
 
-      return result.changes > 0;
+      const released = result.changes > 0;
+      if (released) {
+        this.logger.log(`💸 [${workerId}] ✅ RELEASED lock for transaction ${transactionId}`);
+      } else {
+        this.logger.warn(`💸 [${workerId}] ❌ FAILED to release lock for transaction ${transactionId} (not owned by worker)`);
+      }
+      
+      return released;
     } catch (error) {
-      console.error('Error releasing transaction lock:', error);
+      this.logger.error(`💸 [${workerId}] ERROR releasing transaction lock for ${transactionId}: ${error.message}`);
       return false;
     }
   }
@@ -122,8 +159,10 @@ export class LockService {
     const expiryTimestamp = lockExpiry.getTime() / 1000;
 
     try {
+      this.logger.debug(`🧹 Cleaning up locks expired before ${lockExpiry.toISOString()}`);
+      
       // Clean up expired job locks
-      db
+      const jobResult = db
         .update(jobs)
         .set({
           lockedAt: null,
@@ -139,7 +178,7 @@ export class LockService {
         .run();
 
       // Clean up expired transaction locks
-      db
+      const transactionResult = db
         .update(transactions)
         .set({
           lockedAt: null,
@@ -153,8 +192,12 @@ export class LockService {
           )
         )
         .run();
+
+      if (jobResult.changes > 0 || transactionResult.changes > 0) {
+        this.logger.log(`🧹 ✅ Cleaned up ${jobResult.changes} expired job locks and ${transactionResult.changes} expired transaction locks`);
+      }
     } catch (error) {
-      console.error('Error cleaning up expired locks:', error);
+      this.logger.error(`🧹 ERROR cleaning up expired locks: ${error.message}`);
     }
   }
 }
